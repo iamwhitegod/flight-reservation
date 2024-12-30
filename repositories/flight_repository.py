@@ -44,14 +44,65 @@ class FlightRepository:
       return False
     
   def _find_direct_flights(self, date, departure_airport, destination_airport):
-    pass
+    """Find direct flights only."""
+    query = """
+      SELECT * FROM Flight
+      WHERE dep_port = %s AND arri_port = %s AND DATE(dep_time) = %s
+    """
+
+    self.cursor.execute(query, (departure_airport, destination_airport, date))
+    return self.cursor.fetchall()
 
   def _find_itineraries(self, date, departure_airport, destination_airport, max_stops):
-    pass
+    """Find possible connecting flights with a maximum of 2 stops using BFS."""
+    itinerary_list = []
+
+    # Use BFS to find paths between departure_airport and destination_airport
+    queue = deque([(destination_airport, [], None, 0)])
+    visited = set()
+
+    while queue:
+      current_airport, flights_taken, last_arrival_time, stops_count = queue.popleft()
+
+      if current_airport in visited:
+        continue
+      visited.add(current_airport)
+
+      if stops_count > max_stops:
+        continue # Skip this branch if stops exceeded max_stops
+
+      # Find all flight from the airport
+      query = """
+        SELECT * FROM Flight
+        WHERE dep_port = %s AND DATE(dep_time) = %s
+      """
+      self.cursor.execute(query, (current_airport, date))
+      connecting_flights = self.cursor.fetchall()
+
+      for flight in connecting_flights:
+        flight_no, airline_code, distance_km, dep_time, arri_time, dep_port, arri_port, seats = flight
+
+        # Skip direct flight (i.e., where arrival port matches the destination airport).
+        if dep_port == departure_airport and arri_port == destination_airport:
+          continue # Skip direct flight
+
+        if last_arrival_time is None or (dep_time > last_arrival_time + timedelta(hours=1)):
+          new_flights_taken = flights_taken + [flight]
+
+          if arri_port == destination_airport:
+            itinerary_list.append(new_flights_taken)
+          else:
+            queue.append((arri_port, new_flights_taken, arri_time, stops_count + 1))
+
+      return itinerary_list
 
   def find_flights(self, date, departure_airport, destination_airport):
     """Find direct flights and possible connecting itineraries"""
-    pass
+    direct_flights = self.__find_direct_flights(date, departure_airport, destination_airport)
+
+    # Find possible connecting itineraries with a maximum of 2 stops
+    itineraries = self.__find_itineraries(date, departure_airport, destination_airport, max_stops=2)
+    return direct_flights + itineraries
 
   # Task 4: Define the function to add flight
 

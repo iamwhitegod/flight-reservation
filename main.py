@@ -10,6 +10,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from models.auth import CLIAuthenticator
 from controllers.user_controller import UserController
 from controllers.flight_controller import FlightController
+from controllers.reservation_controller import ReservationController
 
 
 # Task 2, 6, 10, 18: Redefine the main() function
@@ -40,8 +41,10 @@ def main():
     else:
       print("Invalid choice. Try again")
 
+  # If login is successful, proceed with reservations
   if user_controller.current_user:
     flight_controller = FlightController()
+    reservation_controller = ReservationController()
 
     while True:
       print("1. Search/Reserve Flights")
@@ -55,9 +58,9 @@ def main():
       if choice == "1":
         print("Here to search/reserve flights.")
       elif choice == "2":
-        print("Here to view flight reservations.")
+        reservation_controller.view_reservations(user_controller.current_user)
       elif choice == "3":
-        print("Here to cancel flight reservations.")
+        reservation_controller.cancel_reservation(user_controller.current_user)
       elif choice == "4":
         flight_controller.add_flight(user_controller.current_user)
       elif choice == "5":
