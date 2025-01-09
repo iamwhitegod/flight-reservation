@@ -1,6 +1,5 @@
 # Task 14: Import the Amadeus components
-
-
+from amadeus import Client, ResponseError
 
 # Task 3: Define the Flight class
 
@@ -85,6 +84,39 @@ class Flight:
   
   
   # Task 14: Implement the get_ticket_price() function
+  def get_ticket_price(self):
+    # Instantiate an amadeus API client
+    amadeus = Client(
+      client_id='your_client_id',
+      client_secret='your_client_secret'
+    )
+
+    try:
+      # Fetch flight offers
+      flights = amadeus.shopping.flight_offers_search.get(
+        originLocationCode=self.__dep_port,
+        destinationLocationCode=self.__arri__port,
+        departureDate=self.__dep_time.strftime("%Y-%m-%d"),
+        adults=1,
+        currencyCode='USD',
+      ).data
+
+      response_one_flight = amadeus.shopping.flight_offers.pricing.post(flights[0])
+
+      # Extract price information
+      prices = [offer['price']['total'] for offer in response_one_flight.data['flightOffers']]
+
+      if prices:
+        return prices[0] # Return the price of the first offer in specified currency
+      return None
+
+    except ResponseError as error:
+      print(f"Error fetching flight price: {error}")
+      return None
+    
+  def __lt__(self, other):
+    # Compare flights based on their prices
+    return self.get_ticket_price() < other.get_ticket_price()
 
   
 

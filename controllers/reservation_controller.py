@@ -87,12 +87,69 @@ class ReservationController:
 
 
   # Task 15: Define the function to find the cheapest route
+  def _find_cheapest_route(self, flights_or_itineraries, departure_airport, destination_airport):
+    # Create a graph structure with costs
+
+    graph = {}
+    for item in flights_or_itineraries:
+      if isinstance(item, tuple):
+        flight = self.create_flight_object(item)
+        dep_airport = flight.get_dep_port()
+        arr_airport = flight.get_arri_port()
+        price  = flight.get_ticket_price()
+
+        if dep_airport not in graph:
+          graph[dep_airport] = []
+
+        graph[dep_airport].append((arr_airport, price, flight))
+      
+      elif isinstance(item, list): # It's an itinerary (list of  flight tiples)
+        itinerary = [self.create_flight_object(flight) for flight in item]
+        dep_airport = itinerary[0].get_dep_port()
+        arr_port = itinerary[-1].get_arri_port()
+        total_price  = sum(float(flight.get_ticket_price()) for flight in itinerary)
+
+
+        if dep_airport not in graph:
+          graph[dep_airport] = []
+
+        graph[dep_airport].append((arr_airport, total_price, itinerary))
+
+    # Implement Dijkstra algorithm
+    priority_queue = [(0, departure_airport, [])] # (Current cost, current airport, current route)
+    visited = {} # To track the lowest cost to each airport
+
+    while priority_queue:
+      current_cost, current_airport, route = heapq.heappop(priority_queue)
+
+      # If we have reached the destinatio, return the route
+      if current_airport == destination_airport:
+        return route
+      
+      # If we already found a cheaper way to this airport, skip it
+      if current_airport in visited and current_airport >= visited[current_airport]:
+        continue
+
+      # Mark this airport as visited with the current cheapest cost
+      visited[current_airport] = current_cost
+      
+      # Add neighboring airports to the priority queue
+      for neighbor_airport, flight_price, flight_data in graph.get(current_airport, []):
+        new_cost = current_cost + flight_price
+        new_route = route + [flight_data]
+
+        # Add this new option to the priority queue to explore
+        heapq.heappush(priority_queue, (new_cost, neighbor_airport, new_route))
+
+    # If no route found, return None
+    return None
+
 
 
 
   # Task 13: Define the function to search flights
-  def search_flight(self, user):
-    print("Search Flight:")
+  def search_flights(self, user):
+    print("Search Flights:")
     date = input("Date (YYYY-MM-DD): ")
     departure = input("Departure Airport: ")
     destination = input("Destination Airport: ")
@@ -148,17 +205,50 @@ class ReservationController:
       print("No direct flights found. \n")
 
 
-
-
-    
-
-
-
     # Task 15: Call the _find_cheapest_route() function
+    cheapest_option = self._find_cheapest_route(flights_or_itineraries, departure, destination)
+
+    # Display the result
+    if cheapest_option:   
+      print("Cheapest flight or itinerary found:")
+      for flight in cheapest_option:
+        print(flight)
+
+    else:
+      print("No available flights or itineraries found.")
+
+    self.handle_user_choice(user, shortest_itinerary, shortest_direct_flight, cheapest_option)
 
 
 
   # Task 17: Create the _handle_user_choice() function
+  def _handle_user_choice(self, user, shortest_itinerary, shortest_direct_flight, cheapest_option):
+    # Present options to the user for reservation
+    print("\nOptions for reservation:")
+    if shortest_itinerary:
+      print("1. Shortest Itinerary")
+    
+    if shortest_direct_flight:
+      print("2. Shortest Direct Flight")
+
+    if cheapest_option:
+      print("3. Cheapest Option")
+
+    choice = input("Enter the number of your choice (1/2/3):")
+
+    # Call make_reservation based on user choice
+    if choice == "1" and shortest_itinerary:
+      self.make_reservation(user, itinerary=shortest_itinerary)
+
+    elif choice == "2" and shortest_direct_flight:
+      self.make_reservation(user, direct_flight=shortest_direct_flight)
+    
+    elif choice == "3" and cheapest_option:
+      self.make_reservation(user, itinerary=cheapest_option)
+
+    else:
+      print("Invalid choice or option not available.")
+
 
 
   
